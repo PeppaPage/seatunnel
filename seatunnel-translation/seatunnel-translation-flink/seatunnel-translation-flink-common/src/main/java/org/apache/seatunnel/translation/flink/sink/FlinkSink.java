@@ -48,13 +48,13 @@ public class FlinkSink<InputT, CommT, WriterStateT, GlobalCommT>
 
     private final SeaTunnelSink<SeaTunnelRow, WriterStateT, CommT, GlobalCommT> sink;
 
-    private final CatalogTable catalogTable;
+    private final List<CatalogTable> catalogTableList;
 
     public FlinkSink(
             SeaTunnelSink<SeaTunnelRow, WriterStateT, CommT, GlobalCommT> sink,
-            CatalogTable catalogTable) {
+            List<CatalogTable> catalogTableList) {
         this.sink = sink;
-        this.catalogTable = catalogTable;
+        this.catalogTableList = catalogTableList;
     }
 
     @Override
@@ -68,7 +68,7 @@ public class FlinkSink<InputT, CommT, WriterStateT, GlobalCommT>
             return new FlinkSinkWriter<>(
                     sink.createWriter(stContext),
                     1,
-                    catalogTable.getSeaTunnelRowType(),
+                    catalogTableList,
                     stContext.getMetricsContext());
         } else {
             List<WriterStateT> restoredState =
@@ -76,7 +76,7 @@ public class FlinkSink<InputT, CommT, WriterStateT, GlobalCommT>
             return new FlinkSinkWriter<>(
                     sink.restoreWriter(stContext, restoredState),
                     states.get(0).getCheckpointId() + 1,
-                    catalogTable.getSeaTunnelRowType(),
+                    catalogTableList,
                     stContext.getMetricsContext());
         }
     }
@@ -99,7 +99,17 @@ public class FlinkSink<InputT, CommT, WriterStateT, GlobalCommT>
 
     @Override
     public Optional<SimpleVersionedSerializer<GlobalCommT>> getGlobalCommittableSerializer() {
-        return sink.getAggregatedCommitInfoSerializer().map(FlinkSimpleVersionedSerializer::new);
+        // TODO 因为multiSink的getAggregatedCommitInfoSerializer会直接返回DefaultSerializer,但createAggregatedCommitter时又是empty，SinkV1Adapter.wrap中会发生异常
+        boolean present;
+        try {
+            present = sink.createAggregatedCommitter().isPresent();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        if(present)
+            return sink.getAggregatedCommitInfoSerializer().map(FlinkSimpleVersionedSerializer::new);
+        else
+            return Optional.empty();
     }
 
     @Override

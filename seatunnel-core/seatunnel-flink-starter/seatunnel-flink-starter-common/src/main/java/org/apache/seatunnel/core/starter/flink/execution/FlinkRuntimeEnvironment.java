@@ -17,6 +17,7 @@
 
 package org.apache.seatunnel.core.starter.flink.execution;
 
+import org.apache.seatunnel.api.table.type.SeaTunnelRow;
 import org.apache.seatunnel.shade.com.typesafe.config.Config;
 
 import org.apache.seatunnel.api.env.EnvCommonOptions;
@@ -333,11 +334,11 @@ public class FlinkRuntimeEnvironment implements RuntimeEnvironment {
         }
     }
 
-    public void registerResultTable(Config config, DataStream<Row> dataStream, String name) {
+    public void registerResultTable(Config config, DataStream<SeaTunnelRow> dataStream, String name) {
         StreamTableEnvironment tableEnvironment = this.getStreamTableEnvironment();
         if (!TableUtil.tableExists(tableEnvironment, name)) {
             tableEnvironment.createTemporaryView(
-                    name, tableEnvironment.fromChangelogStream(dataStream));
+                    name, tableEnvironment.fromDataStream(dataStream));
         }
     }
 

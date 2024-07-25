@@ -48,7 +48,7 @@ import java.io.Serializable;
  * @param <EnumStateT> The generic type of enumerator state
  */
 public class FlinkSource<SplitT extends SourceSplit, EnumStateT extends Serializable>
-        implements Source<Row, SplitWrapper<SplitT>, EnumStateT>, ResultTypeQueryable<Row> {
+        implements Source<SeaTunnelRow, SplitWrapper<SplitT>, EnumStateT>, ResultTypeQueryable<SeaTunnelRow> {
 
     private final SeaTunnelSource<SeaTunnelRow, SplitT, EnumStateT> source;
 
@@ -68,14 +68,14 @@ public class FlinkSource<SplitT extends SourceSplit, EnumStateT extends Serializ
     }
 
     @Override
-    public SourceReader<Row, SplitWrapper<SplitT>> createReader(SourceReaderContext readerContext)
+    public SourceReader<SeaTunnelRow, SplitWrapper<SplitT>> createReader(SourceReaderContext readerContext)
             throws Exception {
         org.apache.seatunnel.api.source.SourceReader.Context context =
                 new FlinkSourceReaderContext(readerContext, source);
         org.apache.seatunnel.api.source.SourceReader<SeaTunnelRow, SplitT> reader =
                 source.createReader(context);
         return new FlinkSourceReader<>(
-                reader, context, envConfig, (SeaTunnelRowType) source.getProducedType());
+                reader, context, envConfig, source.getProducedCatalogTables().get(0).getSeaTunnelRowType());
     }
 
     @Override
@@ -110,7 +110,7 @@ public class FlinkSource<SplitT extends SourceSplit, EnumStateT extends Serializ
     }
 
     @Override
-    public TypeInformation<Row> getProducedType() {
-        return (TypeInformation<Row>) TypeConverterUtils.convert(source.getProducedType());
+    public TypeInformation<SeaTunnelRow> getProducedType() {
+        return TypeInformation.of(SeaTunnelRow.class);
     }
 }

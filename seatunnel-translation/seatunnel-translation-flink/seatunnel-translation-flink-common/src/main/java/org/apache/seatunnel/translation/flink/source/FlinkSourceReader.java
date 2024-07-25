@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
  * @param <SplitT>
  */
 public class FlinkSourceReader<SplitT extends SourceSplit>
-        implements SourceReader<Row, SplitWrapper<SplitT>> {
+        implements SourceReader<SeaTunnelRow, SplitWrapper<SplitT>> {
 
     private final Logger LOGGER = LoggerFactory.getLogger(FlinkSourceReader.class);
 
@@ -62,6 +62,7 @@ public class FlinkSourceReader<SplitT extends SourceSplit>
             SeaTunnelRowType seaTunnelRowType) {
         this.sourceReader = sourceReader;
         this.context = context;
+        //TODO 修改了 row -> seatunnelRow
         this.flinkRowCollector =
                 new FlinkRowCollector(seaTunnelRowType, envConfig, context.getMetricsContext());
     }
@@ -76,7 +77,7 @@ public class FlinkSourceReader<SplitT extends SourceSplit>
     }
 
     @Override
-    public InputStatus pollNext(ReaderOutput<Row> output) throws Exception {
+    public InputStatus pollNext(ReaderOutput<SeaTunnelRow> output) throws Exception {
         if (!((FlinkSourceReaderContext) context).isSendNoMoreElementEvent()) {
             sourceReader.pollNext(flinkRowCollector.withReaderOutput(output));
         } else {

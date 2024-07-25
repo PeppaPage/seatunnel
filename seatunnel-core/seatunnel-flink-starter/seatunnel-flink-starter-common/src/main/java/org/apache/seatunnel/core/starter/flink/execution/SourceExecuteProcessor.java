@@ -17,6 +17,7 @@
 
 package org.apache.seatunnel.core.starter.flink.execution;
 
+import org.apache.seatunnel.api.table.type.SeaTunnelRow;
 import org.apache.seatunnel.shade.com.typesafe.config.Config;
 
 import org.apache.seatunnel.api.common.CommonOptions;
@@ -71,7 +72,7 @@ public class SourceExecuteProcessor extends FlinkAbstractPluginExecuteProcessor<
             Config pluginConfig = pluginConfigs.get(i);
             FlinkSource flinkSource = new FlinkSource<>(internalSource, envConfig);
 
-            DataStreamSource sourceStream =
+            DataStreamSource<SeaTunnelRow> sourceStream =
                     executionEnvironment.fromSource(
                             flinkSource,
                             WatermarkStrategy.noWatermarks(),
@@ -85,7 +86,7 @@ public class SourceExecuteProcessor extends FlinkAbstractPluginExecuteProcessor<
             sources.add(
                     new DataStreamTableInfo(
                             sourceStream,
-                            sourceTableInfo.getCatalogTables().get(0),
+                            sourceTableInfo.getCatalogTables(),
                             pluginConfig.hasPath(RESULT_TABLE_NAME.key())
                                     ? pluginConfig.getString(RESULT_TABLE_NAME.key())
                                     : null));

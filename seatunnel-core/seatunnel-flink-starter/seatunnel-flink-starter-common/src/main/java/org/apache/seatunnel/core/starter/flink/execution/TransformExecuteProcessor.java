@@ -85,23 +85,24 @@ public class TransformExecuteProcessor
                 DataStreamTableInfo stream =
                         fromSourceTable(pluginConfig, upstreamDataStreams).orElse(input);
                 TableTransformFactory factory = plugins.get(i);
+                // TODO 需要后续修改
                 TableTransformFactoryContext context =
                         new TableTransformFactoryContext(
-                                Collections.singletonList(stream.getCatalogTable()),
+                                Collections.singletonList(stream.getCatalogTableList().get(0)),
                                 ReadonlyConfig.fromConfig(pluginConfig),
                                 classLoader);
                 ConfigValidator.of(context.getOptions()).validate(factory.optionRule());
                 SeaTunnelTransform transform = factory.createTransform(context).createTransform();
 
-                SeaTunnelRowType sourceType = stream.getCatalogTable().getSeaTunnelRowType();
+                SeaTunnelRowType sourceType = stream.getCatalogTableList().get(0).getSeaTunnelRowType();
                 transform.setJobContext(jobContext);
-                DataStream<Row> inputStream =
+                DataStream<SeaTunnelRow> inputStream =
                         flinkTransform(sourceType, transform, stream.getDataStream());
                 registerResultTable(pluginConfig, inputStream);
                 upstreamDataStreams.add(
                         new DataStreamTableInfo(
                                 inputStream,
-                                transform.getProducedCatalogTable(),
+                                stream.getCatalogTableList(),
                                 pluginConfig.hasPath(RESULT_TABLE_NAME.key())
                                         ? pluginConfig.getString(RESULT_TABLE_NAME.key())
                                         : null));
@@ -116,25 +117,24 @@ public class TransformExecuteProcessor
         return upstreamDataStreams;
     }
 
-    protected DataStream<Row> flinkTransform(
-            SeaTunnelRowType sourceType, SeaTunnelTransform transform, DataStream<Row> stream) {
+    protected DataStream<SeaTunnelRow> flinkTransform(
+            SeaTunnelRowType sourceType, SeaTunnelTransform transform, DataStream<SeaTunnelRow> stream) {
         TypeInformation rowTypeInfo =
                 TypeConverterUtils.convert(
                         transform.getProducedCatalogTable().getSeaTunnelRowType());
         FlinkRowConverter transformInputRowConverter = new FlinkRowConverter(sourceType);
         FlinkRowConverter transformOutputRowConverter =
                 new FlinkRowConverter(transform.getProducedCatalogTable().getSeaTunnelRowType());
-        DataStream<Row> output =
+        DataStream<SeaTunnelRow> output =
                 stream.flatMap(
-                        (FlatMapFunction<Row, Row>)
+                        (FlatMapFunction<SeaTunnelRow, SeaTunnelRow>)
                                 (value, out) -> {
-                                    SeaTunnelRow seaTunnelRow =
-                                            transformInputRowConverter.reconvert(value);
+                                    SeaTunnelRow seaTunnelRow =value;
                                     SeaTunnelRow dataRow =
                                             (SeaTunnelRow) transform.map(seaTunnelRow);
                                     if (dataRow != null) {
-                                        Row copy = transformOutputRowConverter.convert(dataRow);
-                                        out.collect(copy);
+//                                        Row copy = transformOutputRowConverter.convert(dataRow);
+                                        out.collect(dataRow);
                                     }
                                 },
                         rowTypeInfo);

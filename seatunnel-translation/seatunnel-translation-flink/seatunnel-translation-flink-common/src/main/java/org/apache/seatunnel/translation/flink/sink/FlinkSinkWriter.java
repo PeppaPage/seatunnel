@@ -23,6 +23,7 @@ import org.apache.seatunnel.api.common.metrics.MetricNames;
 import org.apache.seatunnel.api.common.metrics.MetricsContext;
 import org.apache.seatunnel.api.sink.MultiTableResourceManager;
 import org.apache.seatunnel.api.sink.SupportResourceShare;
+import org.apache.seatunnel.api.table.catalog.CatalogTable;
 import org.apache.seatunnel.api.table.type.SeaTunnelDataType;
 import org.apache.seatunnel.api.table.type.SeaTunnelRow;
 import org.apache.seatunnel.translation.flink.serialization.FlinkRowConverter;
@@ -54,8 +55,8 @@ public class FlinkSinkWriter<InputT, CommT, WriterStateT>
 
     private final org.apache.seatunnel.api.sink.SinkWriter<SeaTunnelRow, CommT, WriterStateT>
             sinkWriter;
-    private final FlinkRowConverter rowSerialization;
-
+//    TODO 删去了 private final FlinkRowConverter rowSerialization;，可以进一步删去catalogTableList
+    private final List<CatalogTable> catalogTableList;
     private final Counter sinkWriteCount;
 
     private final Counter sinkWriteBytes;
@@ -69,11 +70,12 @@ public class FlinkSinkWriter<InputT, CommT, WriterStateT>
     FlinkSinkWriter(
             org.apache.seatunnel.api.sink.SinkWriter<SeaTunnelRow, CommT, WriterStateT> sinkWriter,
             long checkpointId,
-            SeaTunnelDataType<?> dataType,
+            List<CatalogTable> catalogTableList,
             MetricsContext metricsContext) {
         this.sinkWriter = sinkWriter;
         this.checkpointId = checkpointId;
-        this.rowSerialization = new FlinkRowConverter(dataType);
+//        this.rowSerialization = new FlinkRowConverter(dataType);
+        this.catalogTableList = catalogTableList;
         this.sinkWriteCount = metricsContext.counter(MetricNames.SINK_WRITE_COUNT);
         this.sinkWriteBytes = metricsContext.counter(MetricNames.SINK_WRITE_BYTES);
         this.sinkWriterQPS = metricsContext.meter(MetricNames.SINK_WRITE_QPS);
@@ -86,15 +88,17 @@ public class FlinkSinkWriter<InputT, CommT, WriterStateT>
 
     @Override
     public void write(InputT element, SinkWriter.Context context) throws IOException {
-        if (element instanceof Row) {
-            SeaTunnelRow seaTunnelRow = rowSerialization.reconvert((Row) element);
+        if (element instanceof SeaTunnelRow) {
+            SeaTunnelRow seaTunnelRow = (SeaTunnelRow) element;
+            // TODO TEST
+            ((SeaTunnelRow) element).setTableId(((SeaTunnelRow) element).getTableId());
             sinkWriter.write(seaTunnelRow);
             sinkWriteCount.inc();
             sinkWriteBytes.inc(seaTunnelRow.getBytesSize());
             sinkWriterQPS.markEvent();
         } else {
             throw new InvalidClassException(
-                    "only support Flink Row at now, the element Class is " + element.getClass());
+                    "only support Flink SeaTunnelRow at now, the element Class is " + element.getClass());
         }
     }
 

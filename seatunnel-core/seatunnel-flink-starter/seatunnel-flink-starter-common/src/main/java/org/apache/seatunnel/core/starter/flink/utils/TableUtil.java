@@ -23,6 +23,7 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
+import org.apache.seatunnel.api.table.type.SeaTunnelRow;
 
 import java.util.Arrays;
 
@@ -30,12 +31,12 @@ public final class TableUtil {
 
     private TableUtil() {}
 
-    public static DataStream<Row> tableToDataStream(
+    public static DataStream<SeaTunnelRow> tableToDataStream(
             StreamTableEnvironment tableEnvironment, Table table) {
 
-        TypeInformation<Row> typeInfo = table.getSchema().toRowType();
-        DataStream<Row> dataStream = tableEnvironment.toChangelogStream(table);
-        dataStream.getTransformation().setOutputType(typeInfo);
+//       TODO 修改了 toChangelogStream -> toDataStream
+        DataStream<SeaTunnelRow> dataStream = tableEnvironment.toDataStream(table, SeaTunnelRow.class);
+
         return dataStream;
     }
 

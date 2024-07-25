@@ -39,7 +39,7 @@ import org.apache.flink.types.Row;
  */
 public class FlinkRowCollector implements Collector<SeaTunnelRow> {
 
-    private ReaderOutput<Row> readerOutput;
+    private ReaderOutput<SeaTunnelRow> readerOutput;
 
     private final FlinkRowConverter rowSerialization;
 
@@ -64,7 +64,7 @@ public class FlinkRowCollector implements Collector<SeaTunnelRow> {
     public void collect(SeaTunnelRow record) {
         flowControlGate.audit(record);
         try {
-            readerOutput.collect(rowSerialization.convert(record));
+            readerOutput.collect(record);
             sourceReadCount.inc();
             sourceReadBytes.inc(record.getBytesSize());
             sourceReadQPS.markEvent();
@@ -78,7 +78,7 @@ public class FlinkRowCollector implements Collector<SeaTunnelRow> {
         return this;
     }
 
-    public FlinkRowCollector withReaderOutput(ReaderOutput<Row> readerOutput) {
+    public FlinkRowCollector withReaderOutput(ReaderOutput<SeaTunnelRow> readerOutput) {
         this.readerOutput = readerOutput;
         return this;
     }

@@ -17,6 +17,7 @@
 
 package org.apache.seatunnel.core.starter.flink.execution;
 
+import org.apache.seatunnel.api.table.type.SeaTunnelRow;
 import org.apache.seatunnel.shade.com.typesafe.config.Config;
 
 import org.apache.seatunnel.api.common.JobContext;
@@ -100,13 +101,13 @@ public abstract class FlinkAbstractPluginExecuteProcessor<T>
             return Optional.of(
                     new DataStreamTableInfo(
                             TableUtil.tableToDataStream(tableEnvironment, table),
-                            dataStreamTableInfo.getCatalogTable(),
+                            dataStreamTableInfo.getCatalogTableList(),
                             tableName));
         }
         return Optional.empty();
     }
 
-    protected void registerResultTable(Config pluginConfig, DataStream<Row> dataStream) {
+    protected void registerResultTable(Config pluginConfig, DataStream<SeaTunnelRow> dataStream) {
         if (pluginConfig.hasPath(RESULT_TABLE_NAME.key())) {
             String resultTable = pluginConfig.getString(RESULT_TABLE_NAME.key());
             flinkRuntimeEnvironment.registerResultTable(pluginConfig, dataStream, resultTable);

@@ -24,14 +24,17 @@ import org.apache.flink.types.Row;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.apache.seatunnel.api.table.type.SeaTunnelRow;
+
+import java.util.List;
 
 @Data
 @AllArgsConstructor
 public class DataStreamTableInfo {
 
-    private DataStream<Row> dataStream;
+    private DataStream<SeaTunnelRow> dataStream;
 
-    private CatalogTable catalogTable;
+    private List<CatalogTable> catalogTableList;
 
     private String tableName;
 }
