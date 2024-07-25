@@ -140,24 +140,8 @@ public class SinkExecuteProcessor
                     String tableName = sb.toString();
                     sinks.put(tableName, seaTunnelSink);
                 }
-
-//                MultiTableFactoryContext context =
-//                        new MultiTableFactoryContext(
-//                                ReadonlyConfig.fromConfig(sinkConfig),
-//                                classLoader,
-//                                sinks);
-//                MultiTableSinkFactory multiTableSinkFactory = new MultiTableSinkFactory();
-//                sink = multiTableSinkFactory.createSink(context).createSink();
+                // TODO 创建了 multiTableSink
                 sink = FactoryUtil.createMultiTableSink(sinks, ReadonlyConfig.fromConfig(sinkConfig), classLoader);
-
-//                TableSinkFactoryContext context =
-//                        new TableSinkFactoryContext(
-//                                stream.getCatalogTableList().get(0),
-//                                ReadonlyConfig.fromConfig(sinkConfig),
-//                                classLoader);
-//                ConfigValidator.of(context.getOptions()).validate(factory.get().optionRule());
-//                sink = ((TableSinkFactory) factory.get()).createSink(context).createSink();
-//                sink.setJobContext(jobContext);
             }
 
             DataStreamSink<SeaTunnelRow> dataStreamSink =
