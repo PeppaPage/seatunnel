@@ -48,13 +48,13 @@ public class FlinkSink<InputT, CommT, WriterStateT, GlobalCommT>
 
     private final SeaTunnelSink<SeaTunnelRow, WriterStateT, CommT, GlobalCommT> sink;
 
-    private final CatalogTable catalogTable;
+    private final List<CatalogTable> catalogTables;
 
     public FlinkSink(
             SeaTunnelSink<SeaTunnelRow, WriterStateT, CommT, GlobalCommT> sink,
-            CatalogTable catalogTable) {
+            List<CatalogTable> catalogTables) {
         this.sink = sink;
-        this.catalogTable = catalogTable;
+        this.catalogTables = catalogTables;
     }
 
     @Override
@@ -68,7 +68,6 @@ public class FlinkSink<InputT, CommT, WriterStateT, GlobalCommT>
             return new FlinkSinkWriter<>(
                     sink.createWriter(stContext),
                     1,
-                    catalogTable.getSeaTunnelRowType(),
                     stContext.getMetricsContext());
         } else {
             List<WriterStateT> restoredState =
@@ -76,7 +75,6 @@ public class FlinkSink<InputT, CommT, WriterStateT, GlobalCommT>
             return new FlinkSinkWriter<>(
                     sink.restoreWriter(stContext, restoredState),
                     states.get(0).getCheckpointId() + 1,
-                    catalogTable.getSeaTunnelRowType(),
                     stContext.getMetricsContext());
         }
     }
@@ -99,7 +97,16 @@ public class FlinkSink<InputT, CommT, WriterStateT, GlobalCommT>
 
     @Override
     public Optional<SimpleVersionedSerializer<GlobalCommT>> getGlobalCommittableSerializer() {
-        return sink.getAggregatedCommitInfoSerializer().map(FlinkSimpleVersionedSerializer::new);
+        boolean present;
+        try {
+            present = sink.createAggregatedCommitter().isPresent();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        if(present)
+            return sink.getAggregatedCommitInfoSerializer().map(FlinkSimpleVersionedSerializer::new);
+        else
+            return Optional.empty();
     }
 
     @Override
