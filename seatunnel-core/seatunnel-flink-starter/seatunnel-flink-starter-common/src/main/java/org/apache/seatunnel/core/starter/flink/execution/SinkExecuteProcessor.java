@@ -17,6 +17,8 @@
 
 package org.apache.seatunnel.core.starter.flink.execution;
 
+import lombok.extern.slf4j.Slf4j;
+import org.apache.seatunnel.api.sink.*;
 import org.apache.seatunnel.api.table.catalog.CatalogTable;
 import org.apache.seatunnel.api.table.factory.FactoryUtil;
 import org.apache.seatunnel.api.table.type.SeaTunnelRow;
@@ -26,10 +28,6 @@ import org.apache.seatunnel.api.common.CommonOptions;
 import org.apache.seatunnel.api.common.JobContext;
 import org.apache.seatunnel.api.configuration.ReadonlyConfig;
 import org.apache.seatunnel.api.configuration.util.ConfigValidator;
-import org.apache.seatunnel.api.sink.SaveModeExecuteWrapper;
-import org.apache.seatunnel.api.sink.SaveModeHandler;
-import org.apache.seatunnel.api.sink.SeaTunnelSink;
-import org.apache.seatunnel.api.sink.SupportSaveMode;
 import org.apache.seatunnel.api.table.factory.Factory;
 import org.apache.seatunnel.api.table.factory.TableSinkFactory;
 import org.apache.seatunnel.api.table.factory.TableSinkFactoryContext;
@@ -58,6 +56,7 @@ import static org.apache.seatunnel.api.common.CommonOptions.PLUGIN_NAME;
 import static org.apache.seatunnel.api.common.SeaTunnelAPIErrorCode.HANDLE_SAVE_MODE_FAILED;
 
 @SuppressWarnings("unchecked,rawtypes")
+@Slf4j
 public class SinkExecuteProcessor
         extends FlinkAbstractPluginExecuteProcessor<Optional<? extends Factory>> {
 
@@ -128,10 +127,12 @@ public class SinkExecuteProcessor
                 for (CatalogTable catalogTable : stream.getCatalogTables()) {
                     SeaTunnelSink seaTunnelSink;
                     TableSinkFactoryContext context =
-                            new TableSinkFactoryContext(
+                            TableSinkFactoryContext.replacePlaceholderAndCreate(
                                     catalogTable,
                                     ReadonlyConfig.fromConfig(sinkConfig),
-                                    classLoader);
+                                    classLoader,
+                                    ((TableSinkFactory) factory.get())
+                                            .excludeTablePlaceholderReplaceKeys());
                     ConfigValidator.of(context.getOptions()).validate(factory.get().optionRule());
                     seaTunnelSink = ((TableSinkFactory) factory.get()).createSink(context).createSink();
                     seaTunnelSink.setJobContext(jobContext);
@@ -141,7 +142,7 @@ public class SinkExecuteProcessor
                     sinks.put(tableIdName, seaTunnelSink);
                 }
             }
-            SeaTunnelSink sink = FactoryUtil.createMultiTableSink(sinks, ReadonlyConfig.fromConfig(sinkConfig), classLoader);
+            SeaTunnelSink sink = tryGenerateMultiTableSink(sinks, ReadonlyConfig.fromConfig(sinkConfig), classLoader);
             DataStreamSink<SeaTunnelRow> dataStreamSink =
                     stream.getDataStream()
                             .sinkTo(
@@ -156,6 +157,16 @@ public class SinkExecuteProcessor
         }
         // the sink is the last stream
         return null;
+    }
+    // if not support multi table, rollback
+    public SeaTunnelSink tryGenerateMultiTableSink( Map<String, SeaTunnelSink> sinks, ReadonlyConfig sinkConfig, ClassLoader classLoader){
+        if (sinks.values().stream()
+                .anyMatch(sink -> !(sink instanceof SupportMultiTableSink))) {
+            log.info("Unsupported multi table sink api, rollback to sink template");
+            // choose the first sink
+            return sinks.values().iterator().next();
+        }
+        return FactoryUtil.createMultiTableSink(sinks, sinkConfig, classLoader);
     }
 
     public boolean isFallback(Factory factory) {
