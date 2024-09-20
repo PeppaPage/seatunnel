@@ -161,9 +161,7 @@ public class SinkExecuteProcessor
                             .sinkTo(
                                     SinkV1Adapter.wrap(
                                             new FlinkSink<>(
-                                                    sink,
-                                                    stream.getCatalogTables(),
-                                                    parallelism)))
+                                                    sink, stream.getCatalogTables(), parallelism)))
                             .name(String.format("%s-Sink", sink.getPluginName()));
             if (sinkParallelism || envParallelism) {
                 dataStreamSink.setParallelism(parallelism);

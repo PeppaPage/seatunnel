@@ -157,9 +157,7 @@ public class SinkExecuteProcessor
                                     : 1;
             DataStreamSink<SeaTunnelRow> dataStreamSink =
                     stream.getDataStream()
-                            .sinkTo(
-                                    new FlinkSink<>(
-                                            sink, stream.getCatalogTables(), parallelism))
+                            .sinkTo(new FlinkSink<>(sink, stream.getCatalogTables(), parallelism))
                             .name(String.format("%s-Sink", sink.getPluginName()));
             dataStreamSink.setParallelism(parallelism);
         }
